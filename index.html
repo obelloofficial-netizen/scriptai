@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScriptAI — 유튜브 스크립트 생성기</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Pretendard:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #E8341A;
+    --dark: #0F0F0F;
+    --surface: #1A1A1A;
+    --surface2: #242424;
+    --border: #2E2E2E;
+    --text: #F0EDE8;
+    --muted: #888;
+    --accent: #F5C842;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Pretendard', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.2rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .logo span { color: var(--red); }
+  .badge {
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* Layout */
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+  .hero {
+    margin-bottom: 3rem;
+  }
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(42px, 8vw, 72px);
+    line-height: 0.95;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--red);
+    display: block;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 480px;
+  }
+
+  /* Form */
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .field { display: flex; flex-direction: column; gap: 8px; }
+  .field.full { grid-column: 1 / -1; }
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  input[type="text"], select, textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Pretendard', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus {
+    border-color: var(--red);
+  }
+  select option { background: var(--surface2); }
+  textarea { resize: none; height: 80px; }
+
+  /* Tone tags */
+  .tone-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .tone-tag {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Pretendard', sans-serif;
+  }
+  .tone-tag:hover { border-color: var(--red); color: var(--text); }
+  .tone-tag.on {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+  }
+
+  /* Generate button */
+  .gen-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    margin-top: 1.5rem;
+  }
+  .gen-btn:hover { opacity: 0.9; }
+  .gen-btn:active { transform: scale(0.99); }
+  .gen-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Loading */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 3rem;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .loading.show { display: block; }
+  .dot-anim::after {
+    content: '';
+    animation: dots 1.5s infinite;
+  }
+  @keyframes dots {
+    0% { content: ''; }
+    33% { content: '.'; }
+    66% { content: '..'; }
+    100% { content: '...'; }
+  }
+
+  /* Results */
+  .result-wrap {
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+  .result-wrap.show { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+  }
+  .tab {
+    flex: 1;
+    padding: 9px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Pretendard', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab.on {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem;
+  }
+  .result-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 1rem;
+  }
+  .result-body {
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--text);
+    white-space: pre-wrap;
+    min-height: 120px;
+  }
+  .result-footer {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+  }
+  .copy-btn {
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'Pretendard', sans-serif;
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { border-color: var(--text); color: var(--text); }
+  .copy-btn.copied { border-color: var(--accent); color: var(--accent); }
+
+  /* API key section */
+  .key-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .key-section p { font-size: 13px; color: var(--muted); flex: 1; min-width: 200px; }
+  .key-section p strong { color: var(--text); }
+  .key-input-wrap { display: flex; gap: 8px; flex: 2; min-width: 260px; }
+  .key-input-wrap input {
+    flex: 1;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+  .key-save-btn {
+    padding: 10px 18px;
+    background: var(--accent);
+    color: var(--dark);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Pretendard', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  .key-save-btn:hover { opacity: 0.85; }
+  .key-status {
+    font-size: 11px;
+    margin-top: 6px;
+    color: #4caf50;
+    display: none;
+  }
+  .key-status.show { display: block; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    text-align: center;
+    font-size: 12px;
+    color: #444;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    header { padding: 1rem; }
+    .container { padding: 2rem 1rem; }
+    .hero h1 { font-size: 48px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Script<span>AI</span></div>
+  <span class="badge">BETA</span>
+</header>
+
+<div class="container">
+  <div class="hero">
+    <h1>유튜브 콘텐츠<em>자동 생성</em></h1>
+    <p>주제만 입력하면 스크립트, 제목, 썸네일 문구까지 한 번에. 크리에이터를 위한 AI 작업 도우미.</p>
+  </div>
+
+  <!-- API Key Input -->
+  <div class="key-section" id="keySection">
+    <p><strong>API 키 설정</strong><br>Anthropic API 키를 입력하세요. 브라우저에만 저장됩니다.</p>
+    <div>
+      <div class="key-input-wrap">
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+        <button class="key-save-btn" onclick="saveKey()">저장</button>
+      </div>
+      <div class="key-status" id="keyStatus">✓ API 키가 저장되었습니다</div>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="form-card">
+    <div class="form-grid">
+      <div class="field full">
+        <label>영상 주제 *</label>
+        <input type="text" id="topic" placeholder="예: 직장인을 위한 아침 루틴 5가지" />
+      </div>
+      <div class="field">
+        <label>채널 카테고리</label>
+        <select id="category">
+          <option>라이프스타일</option>
+          <option>정보/교육</option>
+          <option>먹방/요리</option>
+          <option>여행</option>
+          <option>재테크</option>
+          <option>뷰티/패션</option>
+          <option>게임</option>
+          <option>테크/IT</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>영상 길이</label>
+        <select id="duration">
+          <option>쇼츠 (1분 이하)</option>
+          <option selected>5분 내외</option>
+          <option>10분 내외</option>
+          <option>15분 이상</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>채널 소개 (선택)</label>
+        <textarea id="channelInfo" placeholder="예: 20~30대 직장인 대상 자기계발 채널, 실용적인 정보 위주"></textarea>
+      </div>
+      <div class="field full">
+        <label>영상 톤</label>
+        <div class="tone-row" id="toneRow">
+          <button class="tone-tag on" onclick="setTone(this)">친근한</button>
+          <button class="tone-tag" onclick="setTone(this)">전문적인</button>
+          <button class="tone-tag" onclick="setTone(this)">유머러스한</button>
+          <button class="tone-tag" onclick="setTone(this)">감성적인</button>
+          <button class="tone-tag" onclick="setTone(this)">자극적인</button>
+          <button class="tone-tag" onclick="setTone(this)">차분한</button>
+        </div>
+      </div>
+    </div>
+    <button class="gen-btn" id="genBtn" onclick="generate()">생성하기</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <span class="dot-anim">AI가 스크립트를 작성하고 있어요</span>
+  </div>
+
+  <!-- Results -->
+  <div class="result-wrap" id="resultWrap">
+    <div class="tabs">
+      <button class="tab on" onclick="switchTab(this,'script')">📝 스크립트</button>
+      <button class="tab" onclick="switchTab(this,'titles')">🎯 제목 5개</button>
+      <button class="tab" onclick="switchTab(this,'thumbnail')">🖼 썸네일 문구</button>
+    </div>
+    <div class="result-card">
+      <div class="result-label" id="resultLabel">스크립트</div>
+      <div class="result-body" id="resultBody"></div>
+      <div class="result-footer">
+        <button class="copy-btn" id="copyBtn" onclick="copyResult()">복사하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>ScriptAI · AI 기반 유튜브 콘텐츠 생성 도구</footer>
+
+<script>
+  let results = { script: '', titles: '', thumbnail: '' };
+  let currentTab = 'script';
+  let activeTone = '친근한';
+
+  // Load saved API key
+  window.onload = () => {
+    const saved = localStorage.getItem('scriptai_key');
+    if (saved) {
+      document.getElementById('apiKeyInput').value = saved;
+      document.getElementById('keyStatus').classList.add('show');
+    }
+  };
+
+  function saveKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (!key) return;
+    localStorage.setItem('scriptai_key', key);
+    document.getElementById('keyStatus').classList.add('show');
+  }
+
+  function setTone(el) {
+    document.querySelectorAll('.tone-tag').forEach(t => t.classList.remove('on'));
+    el.classList.add('on');
+    activeTone = el.textContent.trim();
+  }
+
+  function switchTab(btn, tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+    btn.classList.add('on');
+    currentTab = tab;
+    const labels = { script: '스크립트', titles: '추천 제목', thumbnail: '썸네일 문구' };
+    document.getElementById('resultLabel').textContent = labels[tab];
+    document.getElementById('resultBody').textContent = results[tab];
+    document.getElementById('copyBtn').textContent = '복사하기';
+    document.getElementById('copyBtn').classList.remove('copied');
+  }
+
+  function copyResult() {
+    navigator.clipboard.writeText(results[currentTab]).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '복사됨!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '복사하기';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  async function generate() {
+    const apiKey = localStorage.getItem('scriptai_key') || document.getElementById('apiKeyInput').value.trim();
+    if (!apiKey) { alert('API 키를 먼저 저장해주세요!'); return; }
+
+    const topic = document.getElementById('topic').value.trim();
+    if (!topic) { alert('영상 주제를 입력해주세요!'); return; }
+
+    const category = document.getElementById('category').value;
+    const duration = document.getElementById('duration').value;
+    const channelInfo = document.getElementById('channelInfo').value.trim();
+
+    document.getElementById('genBtn').disabled = true;
+    document.getElementById('loading').classList.add('show');
+    document.getElementById('resultWrap').classList.remove('show');
+
+    const prompt = `당신은 유튜브 콘텐츠 전문가입니다. 아래 조건에 맞는 콘텐츠를 JSON 형식으로만 출력하세요. 마크다운 코드블록 없이 순수 JSON만 반환하세요.
+
+조건:
+- 주제: ${topic}
+- 카테고리: ${category}
+- 영상 길이: ${duration}
+- 톤: ${activeTone}
+${channelInfo ? `- 채널 정보: ${channelInfo}` : ''}
+
+아래 JSON 구조로 정확히 반환하세요:
+{
+  "script": "오프닝 → 본론 → 마무리 구조의 스크립트. 자연스러운 구어체로 실제 말하듯이 작성. 섹션별로 줄바꿈 구분.",
+  "titles": "1. 제목1\n2. 제목2\n3. 제목3\n4. 제목4\n5. 제목5",
+  "thumbnail": "썸네일 문구 3가지 (각 줄에 하나씩, 임팩트 있고 짧게)"
+}`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-calls': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+
+      const text = data.content.map(i => i.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+
+      results.script = parsed.script;
+      results.titles = parsed.titles;
+      results.thumbnail = parsed.thumbnail;
+
+      document.getElementById('resultBody').textContent = results.script;
+      document.getElementById('resultLabel').textContent = '스크립트';
+      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('on', i === 0));
+      currentTab = 'script';
+
+      document.getElementById('resultWrap').classList.add('show');
+    } catch(e) {
+      alert('오류가 발생했어요: ' + e.message);
+    } finally {
+      document.getElementById('genBtn').disabled = false;
+      document.getElementById('loading').classList.remove('show');
+    }
+  }
+</script>
+</body>
+</html>
